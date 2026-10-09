@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เกมการ์ด: จับคู่ตัวส่วนร่วม (Fraction Match & Merge)</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg-color: #f0fdf4;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --border: #cbd5e1;
+            --fill-color: #fbbf24;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Sarabun', 'Prompt', sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            margin: 0 0 10px 0;
+            color: var(--primary);
+            font-size: 28px;
+        }
+
+        .score-board {
+            font-size: 20px;
+            font-weight: bold;
+            background: var(--card-bg);
+            padding: 10px 20px;
+            border-radius: 99px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            display: inline-block;
+            border: 2px solid var(--primary);
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            max-width: 900px;
+            width: 100%;
+        }
+
+        /* Board Area */
+        .board {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+            background: #e2e8f0;
+            padding: 16px;
+            border-radius: 16px;
+        }
+
+        @media (max-width: 600px) {
+            .board {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            aspect-ratio: 3/4;
+            user-select: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: var(--primary);
+            box-shadow: 0 6px 12px rgba(79, 70, 229, 0.2);
+        }
+
+        .card.selected {
+            border-color: var(--primary);
+            border-width: 4px;
+            background: #eef2ff;
+            transform: scale(1.05);
+            box-shadow: 0 8px 16px rgba(79, 70, 229, 0.3);
+        }
+
+        .card.matched {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .fraction-text {
+            font-size: 24px;
+            font-weight: bold;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            line-height: 1.2;
+        }
+
+        .fraction-line {
+            width: 100%;
+            height: 3px;
+            background-color: var(--text-main);
+            margin: 2px 0;
+        }
+
+        /* Area Model CSS */
+        .model-container {
+            width: 100%;
+            flex-grow: 1;
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .area-model {
+            display: grid;
+            width: 100%;
+            height: 100%;
+            max-height: 80px;
+            border: 2px solid var(--text-main);
+            background: white;
+        }
+
+        .area-cell {
+            border: 1px solid rgba(0,0,0,0.2);
+        }
+
+        .area-cell.filled {
+            background-color: var(--fill-color);
+        }
+
+        /* Action Panel */
+        .action-panel {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            display: none; /* Hidden by default */
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            border: 2px solid var(--primary);
+        }
+
+        .action-panel.active {
+            display: flex;
+        }
+
+        .selected-cards-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            font-size: 32px;
+            font-weight: bold;
+            width: 100%;
+        }
+
+        .display-card {
+            background: var(--card-bg);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 120px;
+            aspect-ratio: 3/4;
+        }
+
+        .operator-box {
+            font-size: 48px;
+            color: var(--primary);
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #eef2ff;
+            border-radius: 50%;
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn:disabled {
+            background: var(--border);
+            cursor: not-allowed;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 12px;
+            width: 100%;
+            border: 1px solid var(--border);
+        }
+
+        .input-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 18px;
+        }
+
+        input[type="number"] {
+            width: 70px;
+            padding: 8px;
+            font-size: 18px;
+            text-align: center;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            outline: none;
+        }
+
+        input[type="number"]:focus {
+            border-color: var(--primary);
+        }
+
+        .fraction-input {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .fraction-input input {
+            width: 60px;
+        }
+
+        .fraction-input .line {
+            width: 100%;
+            height: 2px;
+            background: var(--text-main);
+        }
+
+        .message {
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            display: none;
+            width: 100%;
+        }
+
+        .message.success {
+            display: block;
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #4ade80;
+        }
+
+        .message.error {
+            display: block;
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #f87171;
+        }
+
+        .status-text {
+            font-size: 18px;
+            color: #64748b;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🍕 จับคู่ตัวส่วนร่วม (Fraction Match & Merge)</h1>
+        <div class="score-board">คะแนน: <span id="scoreDisplay">0</span></div>
+    </div>
+
+    <div class="game-container">
+        <div class="status-text" id="statusText">👉 เลือกการ์ด 2 ใบจากกระดาน เพื่อเริ่มภารกิจ</div>
+        
+        <!-- Game Board -->
+        <div class="board" id="board"></div>
+
+        <!-- Action Panel -->
+        <div class="action-panel" id="actionPanel">
+            
+            <div id="coinStage">
+                <h2>คุณเลือกการ์ด 2 ใบแล้ว!</h2>
+                <div class="selected-cards-display" id="cardsBeforeCoin"></div>
+                <p>กดปุ่มเพื่อสุ่มว่าจะได้ภารกิจ <b>บวก</b> หรือ <b>ลบ</b></p>
+                <button class="btn" id="btnCoin" onclick="flipCoin()">🪙 ทอยเหรียญ (+ / -)</button>
+            </div>
+
+            <div id="calcStage" style="display: none; width: 100%; flex-direction: column; align-items: center; gap: 20px;">
+                <div class="selected-cards-display" id="cardsAfterCoin"></div>
+                
+                <div class="form-group">
+                    <div class="input-row">
+                        <label><b>1. ตัวส่วนร่วมที่ต้องใช้คือ:</b></label>
+                        <input type="number" id="inputCD" placeholder="ค.ร.น.">
+                    </div>
+                    
+                    <div class="input-row" style="margin-top: 10px;">
+                        <label><b>2. ผลลัพธ์สุดท้าย:</b></label>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span>=</span>
+                            <div class="fraction-input">
+                                <input type="number" id="inputNum" placeholder="เศษ">
+                                <div class="line"></div>
+                                <input type="number" id="inputDen" placeholder="ส่วน">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="feedbackMessage" class="message"></div>
+
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn" onclick="checkAnswer()">✔️ ตรวจคำตอบ</button>
+                    <button class="btn" style="background: var(--danger);" onclick="cancelSelection()">❌ ยกเลิก</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // 1. Game Data
+        const initialCardsData = [
+            { n: 1, d: 2, c: 2, r: 1 }, { n: 1, d: 2, c: 2, r: 1 },
+            { n: 1, d: 3, c: 1, r: 3 }, { n: 2, d: 3, c: 1, r: 3 },
+            { n: 1, d: 4, c: 4, r: 1 }, { n: 3, d: 4, c: 4, r: 1 },
+            { n: 1, d: 5, c: 1, r: 5 }, { n: 2, d: 5, c: 1, r: 5 },
+            { n: 1, d: 6, c: 3, r: 2 }, { n: 5, d: 6, c: 3, r: 2 },
+            { n: 1, d: 8, c: 8, r: 1 }, { n: 3, d: 8, c: 8, r: 1 },
+            { n: 1, d: 10, c: 5, r: 2 }, { n: 3, d: 10, c: 5, r: 2 },
+            { n: 7, d: 10, c: 5, r: 2 }, { n: 1, d: 12, c: 4, r: 3 },
+            { n: 5, d: 12, c: 4, r: 3 }, { n: 1, d: 4, c: 4, r: 1 },
+            { n: 2, d: 3, c: 1, r: 3 }, { n: 3, d: 5, c: 1, r: 5 }
+        ];
+
+        let cards = [];
+        let score = 0;
+        let selectedIds = [];
+        let currentOperator = '';
+        let cardA = null;
+        let cardB = null;
+
+        // 2. Initialize Game
+        function initGame() {
+            // Shuffle cards
+            cards = [...initialCardsData].map((c, i) => ({ ...c, id: i, matched: false }));
+            cards.sort(() => Math.random() - 0.5);
+            
+            score = 0;
+            document.getElementById('scoreDisplay').innerText = score;
+            renderBoard();
+        }
+
+        // 3. Render Area Model (Concrete Representation)
+        function renderAreaModel(n, cols, rows) {
+            let html = `<div class="area-model" style="grid-template-columns: repeat(${cols}, 1fr); grid-template-rows: repeat(${rows}, 1fr);">`;
+            const totalCells = cols * rows;
+            for(let i=0; i<totalCells; i++) {
+                html += `<div class="area-cell ${i < n ? 'filled' : ''}"></div>`;
+            }
+            html += `</div>`;
+            return html;
+        }
+
+        // 4. Render HTML for a Card
+        function createCardHTML(card, isDisplay = false) {
+            return `
+                <div class="fraction-text">
+                    <span>${card.n}</span>
+                    <div class="fraction-line"></div>
+                    <span>${card.d}</span>
+                </div>
+                <div class="model-container">
+                    ${renderAreaModel(card.n, card.c, card.r)}
+                </div>
+            `;
+        }
+
+        // 5. Render Board
+        function renderBoard() {
+            const board = document.getElementById('board');
+            board.innerHTML = '';
+            
+            cards.forEach((card, index) => {
+                const cardEl = document.createElement('div');
+                cardEl.className = `card ${card.matched ? 'matched' : ''} ${selectedIds.includes(card.id) ? 'selected' : ''}`;
+                cardEl.innerHTML = createCardHTML(card);
+                
+                cardEl.onclick = () => handleCardClick(card.id);
+                board.appendChild(cardEl);
+            });
+        }
+
+        // 6. Handle Interaction
+        function handleCardClick(id) {
+            const card = cards.find(c => c.id === id);
+            if (card.matched) return;
+
+            // Deselect if already selected
+            if (selectedIds.includes(id)) {
+                selectedIds = selectedIds.filter(selectedId => selectedId !== id);
+                renderBoard();
+                hideActionPanel();
+                return;
+            }
+
+            // Cannot select more than 2
+            if (selectedIds.length >= 2) return;
+
+            selectedIds.push(id);
+            renderBoard();
+
+            if (selectedIds.length === 2) {
+                showActionPanel();
+            }
+        }
+
+        function showActionPanel() {
+            const panel = document.getElementById('actionPanel');
+            const coinStage = document.getElementById('coinStage');
+            const calcStage = document.getElementById('calcStage');
+            
+            document.getElementById('statusText').innerText = "ลงมือทำภารกิจด้านล่างให้สำเร็จ!";
+            
+            cardA = cards.find(c => c.id === selectedIds[0]);
+            cardB = cards.find(c => c.id === selectedIds[1]);
+
+            // Render selected cards before coin flip
+            document.getElementById('cardsBeforeCoin').innerHTML = `
+                <div class="display-card">${createCardHTML(cardA, true)}</div>
+                <div class="operator-box">?</div>
+                <div class="display-card">${createCardHTML(cardB, true)}</div>
+            `;
+
+            panel.classList.add('active');
+            coinStage.style.display = 'block';
+            calcStage.style.display = 'none';
+            document.getElementById('feedbackMessage').className = 'message';
+            
+            // Clear inputs
+            document.getElementById('inputCD').value = '';
+            document.getElementById('inputNum').value = '';
+            document.getElementById('inputDen').value = '';
+        }
+
+        function hideActionPanel() {
+            document.getElementById('actionPanel').classList.remove('active');
+            document.getElementById('statusText').innerText = "👉 เลือกการ์ด 2 ใบจากกระดาน เพื่อเริ่มภารกิจ";
+        }
+
+        // 7. Coin Flip Logic
+        function flipCoin() {
+            // Random + or -
+            currentOperator = Math.random() > 0.5 ? '+' : '-';
+            
+            // If minus, ensure cardA is larger or equal to cardB to avoid negative results
+            if (currentOperator === '-') {
+                const valA = cardA.n / cardA.d;
+                const valB = cardB.n / cardB.d;
+                if (valA < valB) {
+                    // Swap
+                    const temp = cardA;
+                    cardA = cardB;
+                    cardB = temp;
+                }
+            }
+
+            // Render equation
+            document.getElementById('cardsAfterCoin').innerHTML = `
+                <div class="display-card">${createCardHTML(cardA, true)}</div>
+                <div class="operator-box">${currentOperator}</div>
+                <div class="display-card">${createCardHTML(cardB, true)}</div>
+            `;
+
+            document.getElementById('coinStage').style.display = 'none';
+            document.getElementById('calcStage').style.display = 'flex';
+        }
+
+        function cancelSelection() {
+            selectedIds = [];
+            renderBoard();
+            hideActionPanel();
+        }
+
+        // 8. Validation Logic
+        function checkAnswer() {
+            const valCD = parseInt(document.getElementById('inputCD').value);
+            const valNum = parseInt(document.getElementById('inputNum').value);
+            const valDen = parseInt(document.getElementById('inputDen').value);
+            const msgEl = document.getElementById('feedbackMessage');
+
+            if (!valCD || isNaN(valNum) || !valDen) {
+                showMessage("กรุณากรอกตัวเลขให้ครบทุกช่อง", "error");
+                return;
+            }
+
+            // Rule 1: CD must be a common multiple
+            if (valCD % cardA.d !== 0 || valCD % cardB.d !== 0) {
+                showMessage(`ตัวส่วนร่วม ${valCD} ไม่ถูกต้อง! ต้องเป็นผลคูณของ ${cardA.d} และ ${cardB.d}`, "error");
+                return;
+            }
+
+            // Rule 2: Result Math check (Cross multiplication logic to avoid float issues)
+            // (n1/d1) +/- (n2/d2) = (n1*d2 +/- n2*d1) / (d1*d2)
+            let correctNum = 0;
+            let correctDen = cardA.d * cardB.d;
+
+            if (currentOperator === '+') {
+                correctNum = (cardA.n * cardB.d) + (cardB.n * cardA.d);
+            } else {
+                correctNum = (cardA.n * cardB.d) - (cardB.n * cardA.d);
+            }
+
+            // Check equivalent fraction: correctNum/correctDen == valNum/valDen
+            // correctNum * valDen == valNum * correctDen
+            const isMathCorrect = (correctNum * valDen) === (valNum * correctDen);
+
+            if (!isMathCorrect) {
+                showMessage("ผลลัพธ์เศษส่วนยังไม่ถูกต้อง ลองคิดเลขใหม่อีกครั้งนะ", "error");
+                return;
+            }
+
+            // SUCCESS!
+            showMessage("🎉 ถูกต้องเก่งมาก! รับไป 1 คะแนน", "success");
+            score += 1;
+            document.getElementById('scoreDisplay').innerText = score;
+
+            // Mark cards as matched
+            const card1 = cards.find(c => c.id === cardA.id);
+            const card2 = cards.find(c => c.id === cardB.id);
+            card1.matched = true;
+            card2.matched = true;
+
+            setTimeout(() => {
+                cancelSelection();
+                checkWinCondition();
+            }, 2000);
+        }
+
+        function showMessage(text, type) {
+            const msgEl = document.getElementById('feedbackMessage');
+            msgEl.innerText = text;
+            msgEl.className = `message ${type}`;
+        }
+
+        function checkWinCondition() {
+            const remaining = cards.filter(c => !c.matched).length;
+            if (remaining === 0) {
+                alert(`🎊 ยินดีด้วย! เคลียร์กระดานสำเร็จ ได้คะแนนทั้งหมด ${score} คะแนน`);
+                initGame();
+            }
+        }
+
+        // Start game on load
+        window.onload = initGame;
+    </script>
+</body>
+</html>
